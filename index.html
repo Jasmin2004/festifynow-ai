@@ -750,8 +750,8 @@
 
         try {
           const response = await fetch(
-            "http://127.0.0.1:5000/generate-poster",
-            { method: "POST", body: formData }
+            "https://web-production-5fc69.up.railway.app/generate-poster",
+            { method: "POST", body: formData },
           );
 
           if (!response.ok) {

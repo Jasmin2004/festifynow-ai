@@ -60,14 +60,15 @@ TEXT_COLOR = (246,215,118)
 # =============================
 # LEFT RIBBON
 # =============================
-def draw_left_ribbon(draw, text, y, font, scale):
+def draw_left_ribbon(draw, text, y, font):
 
-    padding = int(18 * scale)
-    ribbon_height = int(65 * scale)
-    cut = int(40 * scale)
+    padding = 28
+    ribbon_height = 90
+    cut = 45
 
     text_width = draw.textlength(text, font=font)
-    ribbon_width = int(text_width + padding*2 + 50)
+
+    ribbon_width = int(text_width + padding*2 + 120)
 
     points = [
         (0,y),
@@ -90,14 +91,15 @@ def draw_left_ribbon(draw, text, y, font, scale):
 # =============================
 # RIGHT RIBBON
 # =============================
-def draw_right_ribbon(draw,text,y,font,img_width,scale):
+def draw_right_ribbon(draw,text,y,font,img_width):
 
-    padding = int(18 * scale)
-    ribbon_height = int(65 * scale)
-    cut = int(40 * scale)
+    padding = 28
+    ribbon_height = 90
+    cut = 45
 
     text_width = draw.textlength(text,font=font)
-    ribbon_width = int(text_width + padding*2 + 50)
+
+    ribbon_width = int(text_width + padding*2 + 120)
 
     start_x = img_width - ribbon_width
 
@@ -129,7 +131,7 @@ def fit_text(draw,text,max_width,base_size):
 
     width = draw.textlength(text,font=font)
 
-    while width > max_width and size > 14:
+    while width > max_width and size > 24:
         size -= 2
         font = get_font(size)
         width = draw.textlength(text,font=font)
@@ -164,11 +166,6 @@ def generate_poster():
 
         width,height = bg.size
         draw = ImageDraw.Draw(bg)
-
-        # =============================
-        # SCALE FACTOR BASED ON IMAGE
-        # =============================
-        scale = width / 1080
 
         # =============================
         # LOGO PANEL
@@ -223,8 +220,8 @@ def generate_poster():
         # =============================
         # TEXT POSITIONS
         # =============================
-        bottom_y1 = height - int(160 * scale)
-        bottom_y2 = height - int(80 * scale)
+        bottom_y1 = height - 180
+        bottom_y2 = height - 90
 
         left_max = width//2 - 40
         right_max = width//2 - 40
@@ -233,20 +230,20 @@ def generate_poster():
         # DRAW RIBBONS
         # =============================
         if company:
-            company_font = fit_text(draw,company,left_max,int(48*scale))
-            draw_left_ribbon(draw,company,bottom_y1,company_font,scale)
+            company_font = fit_text(draw,company,left_max,72)
+            draw_left_ribbon(draw,company,bottom_y1,company_font)
 
         if mobile:
-            mobile_font = fit_text(draw,mobile,right_max,int(44*scale))
-            draw_right_ribbon(draw,mobile,bottom_y1,mobile_font,width,scale)
+            mobile_font = fit_text(draw,mobile,right_max,66)
+            draw_right_ribbon(draw,mobile,bottom_y1,mobile_font,width)
 
         if website:
-            website_font = fit_text(draw,website,left_max,int(40*scale))
-            draw_left_ribbon(draw,website,bottom_y2,website_font,scale)
+            website_font = fit_text(draw,website,left_max,60)
+            draw_left_ribbon(draw,website,bottom_y2,website_font)
 
         if address:
-            address_font = fit_text(draw,address,right_max,int(44*scale))
-            draw_right_ribbon(draw,address,bottom_y2,address_font,width,scale)
+            address_font = fit_text(draw,address,right_max,66)
+            draw_right_ribbon(draw,address,bottom_y2,address_font,width)
 
         img_io = io.BytesIO()
 

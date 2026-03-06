@@ -208,10 +208,10 @@ def generate_poster():
         bottom_y1 = height - 160
         bottom_y2 = height - 80
 
-        company_font = get_font(65)
-        mobile_font = get_font(60)
-        website_font = get_font(55)
-        address_font = get_font(60)
+        company_font = get_font(200)
+        mobile_font = get_font(200)
+        website_font = get_font(200)
+        address_font = get_font(200)
 
         if company:
             draw_left_ribbon(draw, company, bottom_y1, company_font)
@@ -242,3 +242,4 @@ def generate_poster():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
+

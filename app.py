@@ -4,7 +4,7 @@ from PIL import Image, ImageDraw, ImageFont
 import io
 import os
 
-app = Flask(**name**)
+app = Flask(__name__)
 CORS(app)
 
 # =============================
@@ -266,3 +266,4 @@ if **name** == "**main**":
 ```
 app.run(host="0.0.0.0",port=5000,debug=True)
 ```
+

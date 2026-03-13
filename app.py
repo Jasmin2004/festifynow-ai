@@ -37,19 +37,20 @@ FESTIVAL_IMAGES = {
 # FONT LOADER (GitHub Path Priority)
 # =============================
 def get_font(size):
-    font_filename = "ARIALBD.TTF"
-    base_path = os.path.dirname(os.path.abspath(__file__))
-    # This specifically looks for the file you uploaded to GitHub
-    github_font_path = os.path.join(os.getcwd(), "arialbd.ttf")
+    # Try multiple case variations because Linux is case-sensitive
+    font_names = ["arialbd.ttf", "ARIALBD.TTF", "arial.ttf", "Arial.ttf"]
     
-    try:
-        if os.path.exists(github_font_path):
-            return ImageFont.truetype(github_font_path, size)
-        else:
-            # Fallback for local testing if file isn't in project folder yet
-            return ImageFont.truetype("arialbd.ttf", size)
-    except:
-        return ImageFont.load_default()
+    for name in font_names:
+        # Looks in the root folder of your project
+        path = os.path.join(os.getcwd(), name)
+        if os.path.exists(path):
+            try:
+                return ImageFont.truetype(path, size)
+            except:
+                continue
+    
+    # Final fallback if no file is found in GitHub repo
+    return ImageFont.load_default()
 
 # =============================
 # COLORS
@@ -195,5 +196,6 @@ def generate_poster():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
 
 

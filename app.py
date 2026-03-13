@@ -34,126 +34,153 @@ FESTIVAL_IMAGES = {
 }
 
 # =============================
-# FONT LOADER
+# FONT LOADER (GitHub Path Priority)
 # =============================
 def get_font(size):
-    font_filename = "Roboto-VariableFont_wdth,wght.ttf"
-    base_path = os.path.dirname(os.path.abspath(__file__))
-    font_path = os.path.join(base_path, font_filename)
+    # This specifically looks for the file you uploaded to GitHub
+    github_font_path = os.path.join(os.getcwd(), "arialbd.ttf")
+    
     try:
-        if os.path.exists(font_path):
-            return ImageFont.truetype(font_path, size)
-        return ImageFont.load_default()
+        if os.path.exists(github_font_path):
+            return ImageFont.truetype(github_font_path, size)
+        else:
+            # Fallback for local testing if file isn't in project folder yet
+            return ImageFont.truetype("arialbd.ttf", size)
     except:
         return ImageFont.load_default()
 
 # =============================
 # COLORS
 # =============================
-RIBBON_COLOR = (31, 42, 68, 255) # Deep Blue
-TEXT_COLOR = (246, 215, 118)    # Golden Yellow
+RIBBON_COLOR = (31, 42, 68, 230)
+TEXT_COLOR = (246, 215, 118)
 
 # =============================
-# PREMIUM RIBBON LOGIC (Matches 2nd Image)
+# LEFT RIBBON
 # =============================
+def draw_left_ribbon(draw, text, y, font):
+    padding = 18
+    ribbon_height = 45
+    cut = 30
 
-def draw_premium_ribbon(draw, text, y, base_size, img_width, scale, side="left"):
-    # Constraints
-    max_w = int(img_width * 0.48) 
-    padding = int(40 * scale)
-    ribbon_h = int(90 * scale) # Slightly taller for premium look
-    cut = int(45 * scale)      # Deeper cut
-    
-    # Auto-resize text
-    curr_size = base_size
-    font = get_font(curr_size)
-    tw = draw.textlength(text, font=font)
-    
-    while (tw + padding * 2 + cut) > max_w and curr_size > int(18 * scale):
-        curr_size -= 2
-        font = get_font(curr_size)
-        tw = draw.textlength(text, font=font)
+    text_width = draw.textlength(text, font=font)
+    ribbon_width = int(text_width + padding * 2 + 40)
 
-    ribbon_w = int(tw + padding * 2)
+    points = [
+        (0, y),
+        (ribbon_width, y),
+        (ribbon_width + cut, y + ribbon_height / 2),
+        (ribbon_width, y + ribbon_height),
+        (0, y + ribbon_height)
+    ]
 
-    if side == "left":
-        # Ribbon starts at 0, triangle points right
-        points = [
-            (0, y), 
-            (ribbon_w, y), 
-            (ribbon_w + cut, y + ribbon_h / 2), 
-            (ribbon_w, y + ribbon_h), 
-            (0, y + ribbon_h)
-        ]
-        draw.polygon(points, fill=RIBBON_COLOR)
-        draw.text((padding, y + ribbon_h / 2), text, font=font, fill=TEXT_COLOR, anchor="lm")
-    else:
-        # Ribbon ends at img_width, triangle points left
-        start_x = img_width - ribbon_w
-        points = [
-            (start_x, y), 
-            (img_width, y), 
-            (img_width, y + ribbon_h), 
-            (start_x, y + ribbon_h), 
-            (start_x - cut, y + ribbon_h / 2)
-        ]
-        draw.polygon(points, fill=RIBBON_COLOR)
-        draw.text((img_width - padding, y + ribbon_h / 2), text, font=font, fill=TEXT_COLOR, anchor="rm")
+    draw.polygon(points, fill=RIBBON_COLOR)
+    draw.text((padding, y + ribbon_height / 2), text, font=font, fill=TEXT_COLOR, anchor="lm")
+
+# =============================
+# RIGHT RIBBON
+# =============================
+def draw_right_ribbon(draw, text, y, font, img_width):
+    padding = 18
+    ribbon_height = 45
+    cut = 30
+
+    text_width = draw.textlength(text, font=font)
+    ribbon_width = int(text_width + padding * 2 + 40)
+
+    start_x = img_width - ribbon_width
+
+    points = [
+        (start_x, y),
+        (img_width, y),
+        (img_width, y + ribbon_height),
+        (start_x, y + ribbon_height),
+        (start_x - cut, y + ribbon_height / 2)
+    ]
+
+    draw.polygon(points, fill=RIBBON_COLOR)
+    draw.text((img_width - padding, y + ribbon_height / 2), text, font=font, fill=TEXT_COLOR, anchor="rm")
+
+# =============================
+# AUTO FONT FIT
+# =============================
+def fit_text(draw, text, max_width, base_size):
+    size = base_size
+    font = get_font(size)
+    width = draw.textlength(text, font=font)
+
+    while width > max_width and size > 14:
+        size -= 1
+        font = get_font(size)
+        width = draw.textlength(text, font=font)
+
+    return font
 
 @app.route("/")
 def home():
-    return "Poster Generator Ready"
+    return "Festify Poster Server Running"
 
 @app.route("/generate-poster", methods=["POST"])
 def generate_poster():
     try:
-        company = request.form.get("company", "")
-        mobile = request.form.get("mobile", "")
-        website = request.form.get("website", "")
-        address = request.form.get("address", "")
-        festival = request.form.get("festival", "Diwali")
+        company = request.form.get("company") or ""
+        mobile = request.form.get("mobile") or ""
+        website = request.form.get("website") or ""
+        address = request.form.get("address") or ""
+        festival = request.form.get("festival") or "Diwali"
         logo_file = request.files.get("logo")
 
-        bg_path = FESTIVAL_IMAGES.get(festival)
+        bg_path = FESTIVAL_IMAGES.get(festival, "templates_images/diwali.png")
+        if not os.path.exists(bg_path):
+            return jsonify({"error": "Template missing"}), 500
+
         bg = Image.open(bg_path).convert("RGBA")
         width, height = bg.size
         draw = ImageDraw.Draw(bg)
-        scale = width / 1000 
 
         # =============================
-        # LOGO PANEL (AS IS)
+        # LOGO PANEL
         # =============================
         if logo_file:
             logo = Image.open(logo_file).convert("RGBA")
-            p_w, p_h = int(width * 0.16), int(height * 0.11)
-            p_pad = int(p_w * 0.10)
-            ratio = min((p_w - p_pad*2) / logo.width, (p_h - p_pad*2) / logo.height)
+            panel_width = int(width * 0.16)
+            panel_height = int(height * 0.11)
+            padding = int(panel_width * 0.10)
+            max_logo_w = panel_width - padding * 2
+            max_logo_h = panel_height - padding * 2
+            ratio = min(max_logo_w / logo.width, max_logo_h / logo.height)
             new_w, new_h = int(logo.width * ratio), int(logo.height * ratio)
             logo = logo.resize((new_w, new_h), Image.LANCZOS)
-            radius = int(p_h * 0.40)
-            draw.rectangle([0, 0, p_w - radius, p_h], fill=(255, 255, 255, 240))
-            draw.rectangle([0, 0, p_w, p_h - radius], fill=(255, 255, 255, 240))
-            draw.pieslice([p_w - radius * 2, p_h - radius * 2, p_w, p_h], 0, 90, fill=(255, 255, 255, 240))
-            bg.paste(logo, ((p_w - new_w) // 2, (p_h - new_h) // 2), logo)
+            radius = int(panel_height * 0.40)
+            draw.rectangle([0, 0, panel_width - radius, panel_height], fill=(255, 255, 255, 240))
+            draw.rectangle([0, 0, panel_width, panel_height - radius], fill=(255, 255, 255, 240))
+            draw.pieslice([panel_width - radius * 2, panel_height - radius * 2, panel_width, panel_height], 0, 90, fill=(255, 255, 255, 240))
+            bg.paste(logo, ((panel_width - new_w) // 2, (panel_height - new_h) // 2), logo)
 
         # =============================
-        # TEXT POSITIONING (EXACT MATCH)
+        # TEXT POSITIONS
         # =============================
-        # y1 is the row for Company & Mobile
-        # y2 is the row for Website & Address (closer to the bottom)
-        y2 = height - int(110 * scale)
-        y1 = y2 - int(115 * scale) # Gap between rows
+        bottom_y1 = height - 110
+        bottom_y2 = height - 55
+        left_max = width // 2 - 40
+        right_max = width // 2 - 40
 
-        base_f_size = int(45 * scale)
-
+        # DRAW RIBBONS
         if company:
-            draw_premium_ribbon(draw, company.upper(), y1, base_f_size, width, scale, "left")
+            company_font = fit_text(draw, company, left_max, 26)
+            draw_left_ribbon(draw, company, bottom_y1, company_font)
+
         if mobile:
-            draw_premium_ribbon(draw, mobile, y1, base_f_size, width, scale, "right")
+            mobile_font = fit_text(draw, mobile, right_max, 24)
+            draw_right_ribbon(draw, mobile, bottom_y1, mobile_font, width)
+
         if website:
-            draw_premium_ribbon(draw, website.lower(), y2, base_f_size, width, scale, "left")
+            website_font = fit_text(draw, website, left_max, 24)
+            draw_left_ribbon(draw, website, bottom_y2, website_font)
+
         if address:
-            draw_premium_ribbon(draw, address, y2, base_f_size, width, scale, "right")
+            address_font = fit_text(draw, address, right_max, 26)
+            draw_right_ribbon(draw, address, bottom_y2, address_font, width)
 
         img_io = io.BytesIO()
         bg.convert("RGB").save(img_io, "PNG")
@@ -161,6 +188,7 @@ def generate_poster():
         return send_file(img_io, mimetype="image/png")
 
     except Exception as e:
+        print("ERROR:", str(e))
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":

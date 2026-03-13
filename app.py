@@ -33,35 +33,44 @@ FESTIVAL_IMAGES = {
     "Holi": "templates_images/holi.png"
 }
 
-# ==========================================
-# FIXED FONT LOADER (Uses Linux System Fonts)
-# ==========================================
+# =============================
+# FONT LOADER (STRICT FIX)
+# =============================
 def get_font(size):
-    # Railway Linux standard font paths
-    linux_fonts = [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-        "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
-        "DejaVuSans-Bold.ttf"
+    # This must match your GitHub filename EXACTLY
+    font_filename = "Roboto-VariableFont_wdth,wght.ttf"
+    
+    # Check multiple locations
+    base_path = os.path.dirname(os.path.abspath(__file__))
+    possible_paths = [
+        os.path.join(base_path, font_filename),
+        os.path.join(os.getcwd(), font_filename),
+        font_filename
     ]
     
-    for path in linux_fonts:
-        try:
-            return ImageFont.truetype(path, size)
-        except:
-            continue
-                
-    return ImageFont.load_default()
+    for path in possible_paths:
+        if os.path.exists(path):
+            try:
+                return ImageFont.truetype(path, size)
+            except Exception as e:
+                print(f"Error loading font at {path}: {e}")
+                continue
+    
+    # If file not found, use system fallback to avoid tiny text
+    try:
+        return ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", size)
+    except:
+        return ImageFont.load_default()
 
 RIBBON_COLOR = (31, 42, 68, 230)
 TEXT_COLOR = (246, 215, 118)
 
-# ==========================================
-# RIBBON DRAWING FUNCTIONS
-# ==========================================
+# =============================
+# RIBBON FUNCTIONS
+# =============================
 def draw_left_ribbon(draw, text, y, font, scale):
-    padding_side = int(30 * scale)
-    ribbon_height = int(70 * scale) 
+    padding_side = int(35 * scale)
+    ribbon_height = int(75 * scale) 
     cut = int(35 * scale)
 
     text_width = draw.textlength(text, font=font)
@@ -72,8 +81,8 @@ def draw_left_ribbon(draw, text, y, font, scale):
     draw.text((padding_side, y + ribbon_height / 2), text, font=font, fill=TEXT_COLOR, anchor="lm")
 
 def draw_right_ribbon(draw, text, y, font, img_width, scale):
-    padding_side = int(30 * scale)
-    ribbon_height = int(70 * scale) 
+    padding_side = int(35 * scale)
+    ribbon_height = int(75 * scale) 
     cut = int(35 * scale)
 
     text_width = draw.textlength(text, font=font)
@@ -86,7 +95,16 @@ def draw_right_ribbon(draw, text, y, font, img_width, scale):
 
 @app.route("/")
 def home():
-    return "Festify Server Running"
+    return "Festify Server Active - Font Path Fixed"
+
+@app.route("/check-font")
+def check_font():
+    font_filename = "Roboto-VariableFont_wdth,wght.ttf"
+    return {
+        "cwd": os.getcwd(),
+        "file_exists_in_cwd": os.path.exists(font_filename),
+        "files_present": os.listdir('.')
+    }
 
 @app.route("/generate-poster", methods=["POST"])
 def generate_poster():
@@ -103,36 +121,30 @@ def generate_poster():
         width, height = bg.size
         draw = ImageDraw.Draw(bg)
 
-        # Base scale
         scale = width / 1000 
 
-        # =============================
-        # LOGO PANEL (ORIGINAL LOGIC)
-        # =============================
+        # LOGO PANEL (ORIGINAL)
         if logo_file:
             logo = Image.open(logo_file).convert("RGBA")
-            panel_width = int(width * 0.16)
-            panel_height = int(height * 0.11)
-            p_pad = int(panel_width * 0.10)
-            max_logo_w = panel_width - p_pad * 2
-            max_logo_h = panel_height - p_pad * 2
-            ratio = min(max_logo_w / logo.width, max_logo_h / logo.height)
+            p_w, p_h = int(width * 0.16), int(height * 0.11)
+            p_pad = int(p_w * 0.10)
+            ratio = min((p_w - p_pad*2) / logo.width, (p_h - p_pad*2) / logo.height)
             new_w, new_h = int(logo.width * ratio), int(logo.height * ratio)
             logo = logo.resize((new_w, new_h), Image.LANCZOS)
-            radius = int(panel_height * 0.40)
-            draw.rectangle([0, 0, panel_width - radius, panel_height], fill=(255, 255, 255, 240))
-            draw.rectangle([0, 0, panel_width, panel_height - radius], fill=(255, 255, 255, 240))
-            draw.pieslice([panel_width - radius * 2, panel_height - radius * 2, panel_width, panel_height], 0, 90, fill=(255, 255, 255, 240))
-            bg.paste(logo, ((panel_width - new_w) // 2, (panel_height - new_h) // 2), logo)
+            radius = int(p_h * 0.40)
+            draw.rectangle([0, 0, p_w - radius, p_h], fill=(255, 255, 255, 240))
+            draw.rectangle([0, 0, p_w, p_h - radius], fill=(255, 255, 255, 240))
+            draw.pieslice([p_w - radius * 2, p_h - radius * 2, p_w, p_h], 0, 90, fill=(255, 255, 255, 240))
+            bg.paste(logo, ((p_w - new_w) // 2, (p_h - new_h) // 2), logo)
 
-        # =============================
-        # TEXT POSITION & SIZE FIX
-        # =============================
-        bottom_y1 = height - int(200 * scale) 
-        bottom_y2 = height - int(100 * scale) 
+        # TEXT POSITION & SIZE
+        # Row 1 (Top)
+        bottom_y1 = height - int(220 * scale) 
+        # Row 2 (Bottom)
+        bottom_y2 = height - int(110 * scale) 
 
-        # Font size calculation
-        font_size = int(48 * scale)
+        # SIZE: Increased to 52 for high visibility
+        font_size = int(52 * scale)
         active_font = get_font(font_size)
 
         if company:
@@ -142,7 +154,6 @@ def generate_poster():
         if website:
             draw_left_ribbon(draw, website, bottom_y2, active_font, scale)
         if address:
-            # FIXED: Changed address_font to active_font
             draw_right_ribbon(draw, address, bottom_y2, active_font, width, scale)
 
         img_io = io.BytesIO()

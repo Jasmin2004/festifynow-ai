@@ -44,52 +44,51 @@ RIBBON_COLOR = (31, 42, 68, 230)
 TEXT_COLOR = (246, 215, 118)
 
 # =============================
-# LEFT RIBBON (Smaller + Space)
+# LEFT RIBBON (Flush to edge, Slimmer)
 # =============================
 def draw_left_ribbon(draw, text, y, font, scale):
-    margin = int(20 * scale) # Space from left edge
-    padding = int(25 * scale)
-    ribbon_height = int(60 * scale) # Reduced from 80
-    cut = int(30 * scale)
+    padding_side = int(30 * scale)
+    ribbon_height = int(70 * scale) # Slimmer height
+    cut = int(35 * scale)
 
     text_width = draw.textlength(text, font=font)
-    ribbon_width = int(text_width + padding * 2)
+    ribbon_width = int(text_width + padding_side * 2)
 
     points = [
-        (margin, y),
-        (margin + ribbon_width, y),
-        (margin + ribbon_width + cut, y + ribbon_height / 2),
-        (margin + ribbon_width, y + ribbon_height),
-        (margin, y + ribbon_height)
+        (0, y),
+        (ribbon_width, y),
+        (ribbon_width + cut, y + ribbon_height / 2),
+        (ribbon_width, y + ribbon_height),
+        (0, y + ribbon_height)
     ]
 
     draw.polygon(points, fill=RIBBON_COLOR)
-    draw.text((margin + padding, y + ribbon_height / 2), text, font=font, fill=TEXT_COLOR, anchor="lm")
+    # anchor="lm" ensures the text is vertically centered in the ribbon
+    draw.text((padding_side, y + ribbon_height / 2), text, font=font, fill=TEXT_COLOR, anchor="lm")
 
 # =============================
-# RIGHT RIBBON (Smaller + Space)
+# RIGHT RIBBON (Flush to edge, Slimmer)
 # =============================
 def draw_right_ribbon(draw, text, y, font, img_width, scale):
-    margin = int(20 * scale) # Space from right edge
-    padding = int(25 * scale)
-    ribbon_height = int(60 * scale) # Reduced from 80
-    cut = int(30 * scale)
+    padding_side = int(30 * scale)
+    ribbon_height = int(70 * scale) 
+    cut = int(35 * scale)
 
     text_width = draw.textlength(text, font=font)
-    ribbon_width = int(text_width + padding * 2)
+    ribbon_width = int(text_width + padding_side * 2)
 
-    start_x = img_width - ribbon_width - margin
+    start_x = img_width - ribbon_width
 
     points = [
         (start_x, y),
-        (img_width - margin, y),
-        (img_width - margin, y + ribbon_height),
+        (img_width, y),
+        (img_width, y + ribbon_height),
         (start_x, y + ribbon_height),
         (start_x - cut, y + ribbon_height / 2)
     ]
 
     draw.polygon(points, fill=RIBBON_COLOR)
-    draw.text((img_width - margin - padding, y + ribbon_height / 2), text, font=font, fill=TEXT_COLOR, anchor="rm")
+    draw.text((img_width - padding_side, y + ribbon_height / 2), text, font=font, fill=TEXT_COLOR, anchor="rm")
 
 @app.route("/")
 def home():
@@ -110,19 +109,19 @@ def generate_poster():
         width, height = bg.size
         draw = ImageDraw.Draw(bg)
 
-        # Scale factor based on template width
+        # Base scale
         scale = width / 1000 
 
         # =============================
-        # LOGO PANEL (KEEP AS IS)
+        # LOGO PANEL (AS IS)
         # =============================
         if logo_file:
             logo = Image.open(logo_file).convert("RGBA")
             panel_width = int(width * 0.16)
             panel_height = int(height * 0.11)
-            padding = int(panel_width * 0.10)
-            max_logo_w = panel_width - padding * 2
-            max_logo_h = panel_height - padding * 2
+            p_pad = int(panel_width * 0.10)
+            max_logo_w = panel_width - p_pad * 2
+            max_logo_h = panel_height - p_pad * 2
             ratio = min(max_logo_w / logo.width, max_logo_h / logo.height)
             new_w, new_h = int(logo.width * ratio), int(logo.height * ratio)
             logo = logo.resize((new_w, new_h), Image.LANCZOS)
@@ -133,15 +132,15 @@ def generate_poster():
             bg.paste(logo, ((panel_width - new_w) // 2, (panel_height - new_h) // 2), logo)
 
         # =============================
-        # TEXT POSITION & SIZE
+        # TEXT POSITION & BIG TEXT FIX
         # =============================
-        # Adjusted positions to look cleaner
-        bottom_y1 = height - int(150 * scale)
-        bottom_y2 = height - int(80 * scale)
+        # Added more vertical space between the two rows of ribbons
+        bottom_y1 = height - int(200 * scale) # Higher up
+        bottom_y2 = height - int(100 * scale) # Lower down
 
-        # To fix small text on server: we must ensure a font is loaded.
-        # size 35-40 is perfect for a 60px ribbon.
-        font_size = int(38 * scale)
+        # Increased font size significantly to fix server issue
+        # size 48 is large enough to be clearly readable in a 70px ribbon
+        font_size = int(48 * scale)
         active_font = get_font(font_size)
 
         if company:

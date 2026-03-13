@@ -30,46 +30,34 @@ FESTIVAL_IMAGES = {
     "Holi": "templates_images/holi.png"
 }
 
+# ==========================================
+# FIXED FONT LOADER (Uses Linux System Fonts)
+# ==========================================
 def get_font(size):
-    # Railway Safe Font Loading
-    font_paths = ["DejaVuSans-Bold.ttf", "arial.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"]
-    for path in font_paths:
-        try:
-            return ImageFont.truetype(path, size)
-        except:
-            continue
+    # These are standard locations for fonts on Railway/Linux servers
+    linux_fonts = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+        "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf"
+    ]
+    
+    for path in linux_fonts:
+        if os.path.exists(path):
+            try:
+                return ImageFont.truetype(path, size)
+            except:
+                continue
+                
+    # If no Linux font found, it uses the tiny default (last resort)
     return ImageFont.load_default()
 
 RIBBON_COLOR = (31, 42, 68, 230)
 TEXT_COLOR = (246, 215, 118)
 
-# =============================
-# LEFT RIBBON (Flush to edge, Slimmer)
-# =============================
+# ==========================================
+# RIBBON LOGIC (Slimmer + Large Text)
+# ==========================================
 def draw_left_ribbon(draw, text, y, font, scale):
-    padding_side = int(30 * scale)
-    ribbon_height = int(70 * scale) # Slimmer height
-    cut = int(35 * scale)
-
-    text_width = draw.textlength(text, font=font)
-    ribbon_width = int(text_width + padding_side * 2)
-
-    points = [
-        (0, y),
-        (ribbon_width, y),
-        (ribbon_width + cut, y + ribbon_height / 2),
-        (ribbon_width, y + ribbon_height),
-        (0, y + ribbon_height)
-    ]
-
-    draw.polygon(points, fill=RIBBON_COLOR)
-    # anchor="lm" ensures the text is vertically centered in the ribbon
-    draw.text((padding_side, y + ribbon_height / 2), text, font=font, fill=TEXT_COLOR, anchor="lm")
-
-# =============================
-# RIGHT RIBBON (Flush to edge, Slimmer)
-# =============================
-def draw_right_ribbon(draw, text, y, font, img_width, scale):
     padding_side = int(30 * scale)
     ribbon_height = int(70 * scale) 
     cut = int(35 * scale)
@@ -77,16 +65,20 @@ def draw_right_ribbon(draw, text, y, font, img_width, scale):
     text_width = draw.textlength(text, font=font)
     ribbon_width = int(text_width + padding_side * 2)
 
+    points = [(0, y), (ribbon_width, y), (ribbon_width + cut, y + ribbon_height / 2), (ribbon_width, y + ribbon_height), (0, y + ribbon_height)]
+    draw.polygon(points, fill=RIBBON_COLOR)
+    draw.text((padding_side, y + ribbon_height / 2), text, font=font, fill=TEXT_COLOR, anchor="lm")
+
+def draw_right_ribbon(draw, text, y, font, img_width, scale):
+    padding_side = int(30 * scale)
+    ribbon_height = int(70 * scale) 
+    cut = int(35 * scale)
+
+    text_width = draw.textlength(text, font=font)
+    ribbon_width = int(text_width + padding_side * 2)
     start_x = img_width - ribbon_width
 
-    points = [
-        (start_x, y),
-        (img_width, y),
-        (img_width, y + ribbon_height),
-        (start_x, y + ribbon_height),
-        (start_x - cut, y + ribbon_height / 2)
-    ]
-
+    points = [(start_x, y), (img_width, y), (img_width, y + ribbon_height), (start_x, y + ribbon_height), (start_x - cut, y + ribbon_height / 2)]
     draw.polygon(points, fill=RIBBON_COLOR)
     draw.text((img_width - padding_side, y + ribbon_height / 2), text, font=font, fill=TEXT_COLOR, anchor="rm")
 
@@ -113,7 +105,7 @@ def generate_poster():
         scale = width / 1000 
 
         # =============================
-        # LOGO PANEL (AS IS)
+        # LOGO PANEL (YOUR ORIGINAL LOGIC)
         # =============================
         if logo_file:
             logo = Image.open(logo_file).convert("RGBA")
@@ -132,14 +124,13 @@ def generate_poster():
             bg.paste(logo, ((panel_width - new_w) // 2, (panel_height - new_h) // 2), logo)
 
         # =============================
-        # TEXT POSITION & BIG TEXT FIX
+        # TEXT POSITION & SIZE FIX
         # =============================
-        # Added more vertical space between the two rows of ribbons
-        bottom_y1 = height - int(200 * scale) # Higher up
-        bottom_y2 = height - int(100 * scale) # Lower down
+        # y1 is top ribbon, y2 is bottom ribbon (added space between them)
+        bottom_y1 = height - int(200 * scale) 
+        bottom_y2 = height - int(100 * scale) 
 
-        # Increased font size significantly to fix server issue
-        # size 48 is large enough to be clearly readable in a 70px ribbon
+        # Force large font size
         font_size = int(48 * scale)
         active_font = get_font(font_size)
 
@@ -150,7 +141,7 @@ def generate_poster():
         if website:
             draw_left_ribbon(draw, website, bottom_y2, active_font, scale)
         if address:
-            draw_right_ribbon(draw, address, bottom_y2, active_font, width, scale)
+            draw_right_ribbon(draw, address, bottom_y2, address_font, width, scale)
 
         img_io = io.BytesIO()
         bg.convert("RGB").save(img_io, "PNG")

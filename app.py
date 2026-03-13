@@ -37,6 +37,7 @@ FESTIVAL_IMAGES = {
 # FONT LOADER (GitHub Path Priority)
 # =============================
 def get_font(size):
+    font_filename = "ARIAL.TTF"
     # This specifically looks for the file you uploaded to GitHub
     github_font_path = os.path.join(os.getcwd(), "arialbd.ttf")
     
@@ -193,3 +194,4 @@ def generate_poster():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+

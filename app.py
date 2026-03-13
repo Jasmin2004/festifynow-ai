@@ -35,12 +35,24 @@ FESTIVAL_IMAGES = {
 }
 
 # =============================
-# FONT LOADER (Railway Safe)
+# FONT LOADER (Improved for Server)
 # =============================
 
 def get_font(size):
+    # Standard Linux paths for fonts often found on Railway/Ubuntu
+    font_paths = [
+        "DejaVuSans-Bold.ttf", 
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
+    ]
+    for path in font_paths:
+        try:
+            return ImageFont.truetype(path, size)
+        except:
+            continue
+    # If no system font found, try to load from local directory if you uploaded one
     try:
-        return ImageFont.truetype("DejaVuSans-Bold.ttf", size)
+        return ImageFont.truetype("arial.ttf", size)
     except:
         return ImageFont.load_default()
 
@@ -52,17 +64,18 @@ RIBBON_COLOR = (31, 42, 68, 230)
 TEXT_COLOR = (246, 215, 118)
 
 # =============================
-# LEFT RIBBON
+# LEFT RIBBON (Scaled)
 # =============================
 
-def draw_left_ribbon(draw, text, y, font):
+def draw_left_ribbon(draw, text, y, font, scale_factor):
+    padding = int(30 * scale_factor)
+    ribbon_height = int(80 * scale_factor)
+    cut = int(40 * scale_factor)
 
-    padding = 30
-    ribbon_height = 80
-    cut = 40
-
-    text_width = draw.textlength(text, font=font)
-    ribbon_width = int(text_width + padding * 2 + 50)
+    # Use textbbox for precise measurement on server
+    bbox = draw.textbbox((0, 0), text, font=font)
+    text_width = bbox[2] - bbox[0]
+    ribbon_width = int(text_width + padding * 2 + (50 * scale_factor))
 
     points = [
         (0, y),
@@ -73,27 +86,20 @@ def draw_left_ribbon(draw, text, y, font):
     ]
 
     draw.polygon(points, fill=RIBBON_COLOR)
-
-    draw.text(
-        (padding, y + ribbon_height / 2),
-        text,
-        font=font,
-        fill=TEXT_COLOR,
-        anchor="lm"
-    )
+    draw.text((padding, y + ribbon_height / 2), text, font=font, fill=TEXT_COLOR, anchor="lm")
 
 # =============================
-# RIGHT RIBBON
+# RIGHT RIBBON (Scaled)
 # =============================
 
-def draw_right_ribbon(draw, text, y, font, img_width):
+def draw_right_ribbon(draw, text, y, font, img_width, scale_factor):
+    padding = int(30 * scale_factor)
+    ribbon_height = int(80 * scale_factor)
+    cut = int(40 * scale_factor)
 
-    padding = 30
-    ribbon_height = 80
-    cut = 40
-
-    text_width = draw.textlength(text, font=font)
-    ribbon_width = int(text_width + padding * 2 + 50)
+    bbox = draw.textbbox((0, 0), text, font=font)
+    text_width = bbox[2] - bbox[0]
+    ribbon_width = int(text_width + padding * 2 + (50 * scale_factor))
 
     start_x = img_width - ribbon_width
 
@@ -106,14 +112,7 @@ def draw_right_ribbon(draw, text, y, font, img_width):
     ]
 
     draw.polygon(points, fill=RIBBON_COLOR)
-
-    draw.text(
-        (img_width - padding, y + ribbon_height / 2),
-        text,
-        font=font,
-        fill=TEXT_COLOR,
-        anchor="rm"
-    )
+    draw.text((img_width - padding, y + ribbon_height / 2), text, font=font, fill=TEXT_COLOR, anchor="rm")
 
 # =============================
 # HOME ROUTE
@@ -129,104 +128,73 @@ def home():
 
 @app.route("/generate-poster", methods=["POST"])
 def generate_poster():
-
     try:
-
         company = request.form.get("company", "")
         mobile = request.form.get("mobile", "")
         website = request.form.get("website", "")
         address = request.form.get("address", "")
         festival = request.form.get("festival", "Diwali")
-
         logo_file = request.files.get("logo")
 
         bg_path = FESTIVAL_IMAGES.get(festival)
-
         if not bg_path or not os.path.exists(bg_path):
             return jsonify({"error": "Template missing"}), 500
 
         bg = Image.open(bg_path).convert("RGBA")
-
         width, height = bg.size
         draw = ImageDraw.Draw(bg)
+
+        # SCALE FACTOR: Adjusts everything based on image resolution
+        # Assumes base design was made for ~1000px height
+        scale = height / 1000
 
         # =============================
         # LOGO PANEL
         # =============================
-
         if logo_file:
-
             logo = Image.open(logo_file).convert("RGBA")
-
             panel_width = int(width * 0.16)
             panel_height = int(height * 0.11)
-
             padding = int(panel_width * 0.10)
-
             max_logo_w = panel_width - padding * 2
             max_logo_h = panel_height - padding * 2
 
             ratio = min(max_logo_w / logo.width, max_logo_h / logo.height)
-
-            new_w = int(logo.width * ratio)
-            new_h = int(logo.height * ratio)
-
-            logo = logo.resize((new_w, new_h), Image.LANCZOS)
+            new_w, new_h = int(logo.width * ratio), int(logo.height * ratio)
+            logo = logo.resize((new_w, new_h), Image.Resampling.LANCZOS)
 
             radius = int(panel_height * 0.40)
+            draw.rectangle([0, 0, panel_width - radius, panel_height], fill=(255, 255, 255, 240))
+            draw.rectangle([0, 0, panel_width, panel_height - radius], fill=(255, 255, 255, 240))
+            draw.pieslice([panel_width - radius * 2, panel_height - radius * 2, panel_width, panel_height], 0, 90, fill=(255, 255, 255, 240))
 
-            draw.rectangle(
-                [0, 0, panel_width - radius, panel_height],
-                fill=(255, 255, 255, 240)
-            )
-
-            draw.rectangle(
-                [0, 0, panel_width, panel_height - radius],
-                fill=(255, 255, 255, 240)
-            )
-
-            draw.pieslice(
-                [
-                    panel_width - radius * 2,
-                    panel_height - radius * 2,
-                    panel_width,
-                    panel_height
-                ],
-                0, 90,
-                fill=(255, 255, 255, 240)
-            )
-
-            logo_x = (panel_width - new_w) // 2
-            logo_y = (panel_height - new_h) // 2
-
-            bg.paste(logo, (logo_x, logo_y), logo)
+            bg.paste(logo, ((panel_width - new_w) // 2, (panel_height - new_h) // 2), logo)
 
         # =============================
-        # TEXT POSITION
+        # TEXT POSITION & SIZE FIX
         # =============================
+        bottom_y1 = height - int(180 * scale)
+        bottom_y2 = height - int(90 * scale)
 
-        bottom_y1 = height - 160
-        bottom_y2 = height - 80
+        # IMPORTANT: Font size must be proportional to the 80px ribbon height
+        # 45 is roughly 55% of 80, which looks balanced.
+        font_size = int(45 * scale)
 
-        company_font = get_font(200)
-        mobile_font = get_font(200)
-        website_font = get_font(200)
-        address_font = get_font(200)
+        company_font = get_font(font_size)
+        mobile_font = get_font(font_size)
+        website_font = get_font(font_size)
+        address_font = get_font(font_size)
 
         if company:
-            draw_left_ribbon(draw, company, bottom_y1, company_font)
-
+            draw_left_ribbon(draw, company, bottom_y1, company_font, scale)
         if mobile:
-            draw_right_ribbon(draw, mobile, bottom_y1, mobile_font, width)
-
+            draw_right_ribbon(draw, mobile, bottom_y1, mobile_font, width, scale)
         if website:
-            draw_left_ribbon(draw, website, bottom_y2, website_font)
-
+            draw_left_ribbon(draw, website, bottom_y2, website_font, scale)
         if address:
-            draw_right_ribbon(draw, address, bottom_y2, address_font, width)
+            draw_right_ribbon(draw, address, bottom_y2, address_font, width, scale)
 
         img_io = io.BytesIO()
-
         bg.convert("RGB").save(img_io, "PNG")
         img_io.seek(0)
 
@@ -236,10 +204,6 @@ def generate_poster():
         print("ERROR:", str(e))
         return jsonify({"error": str(e)}), 500
 
-# =============================
-# RUN SERVER
-# =============================
-
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
-
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
